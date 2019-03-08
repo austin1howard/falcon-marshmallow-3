@@ -299,7 +299,16 @@ class Marshmallow:
                 raise HTTPBadRequest('Request must be valid JSON')
 
             try:
-                data = sch.load(parsed)
+                data_ = sch.load(parsed)
+                # marshmallow 2.x backwards compatibility
+                if isinstance(data_, tuple):
+                    data, errors = data_
+                    if errors:
+                        raise HTTPUnprocessableEntity(
+                            description = self._json.dumps(errors)
+                        )
+                else:
+                    data = data_
             except ValidationError as e:
                 raise HTTPUnprocessableEntity(
                     description=self._json.dumps(e.messages)
@@ -362,7 +371,17 @@ class Marshmallow:
                 )
 
             try:
-                data = sch.dumps(req.context[self._resp_key])
+                data_ = sch.dumps(req.context[self._resp_key])
+                # marshmallow 2.x backwards compatibility
+                if isinstance(data_, tuple):
+                    data, errors = data_
+                    if errors:
+                        raise HTTPInternalServerError(
+                            title = 'Could not serialize response',
+                            description = json.dumps(errors)
+                        )
+                else:
+                    data = data_
             except ValidationError as e:
                 raise HTTPInternalServerError(
                     title='Could not serialize response',
