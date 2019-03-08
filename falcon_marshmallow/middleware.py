@@ -21,6 +21,7 @@ from falcon.errors import (
     HTTPUnsupportedMediaType,
 )
 from marshmallow import Schema
+from marshmallow.exceptions import ValidationError
 
 
 log = logging.getLogger(__name__)
@@ -297,11 +298,11 @@ class Marshmallow:
             except self._json.JSONDecodeError:
                 raise HTTPBadRequest('Request must be valid JSON')
 
-            data, errors = sch.load(parsed)
-
-            if errors:
+            try:
+                data = sch.load(parsed)
+            except ValidationError as e:
                 raise HTTPUnprocessableEntity(
-                    description=self._json.dumps(errors)
+                    description=self._json.dumps(e.messages)
                 )
 
             req.context[self._req_key] = data
@@ -360,12 +361,12 @@ class Marshmallow:
                     'must be instantiated Marshmallow schemas.'
                 )
 
-            data, errors = sch.dumps(req.context[self._resp_key])
-
-            if errors:
+            try:
+                data = sch.dumps(req.context[self._resp_key])
+            except ValidationError as e:
                 raise HTTPInternalServerError(
                     title='Could not serialize response',
-                    description=json.dumps(errors)
+                    description=json.dumps(e.messages)
                 )
 
             resp.body = data
